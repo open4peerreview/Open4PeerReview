@@ -18,6 +18,7 @@ Follow the steps in order. Do not skip the approval gate in step 4.
 
 - Run `git status --short` and `git branch --show-current`.
 - If there are uncommitted changes unrelated to this request, tell the user and ask whether to stash them, carry them along, or abort. Never discard them.
+- Run `git branch -r` and `gh pr list` to see open branches/PRs. If another one touches the same files as this request, warn the user before continuing, since two branches shouldn't edit the same files at once.
 - Run `gh auth status`. If `gh` is not authenticated, tell the user now (they can run `! gh auth login`) rather than discovering it at step 8.
 
 ## 2. Create the branch
@@ -26,7 +27,7 @@ Follow the steps in order. Do not skip the approval gate in step 4.
 - Build a short kebab-case slug (3–5 words, lowercase, no punctuation) from the description, e.g. `feature/reviewer-dashboard-filters` or `fix/rubric-accordion-state`.
 - Branch from an up-to-date `main`:
   `git fetch origin && git switch -c <branch> origin/main`
-  (If the user is intentionally on another base such as `testing`, ask before switching bases.)
+  (`main` is the only permanent branch; the old `testing`, `dev`, and `design/*` branches are gone, so never base off or recreate them.)
 - If the branch name already exists, append `-2` rather than reusing it.
 
 ## 3. Investigate and write `plan.md`
@@ -116,45 +117,59 @@ If a check fails and you cannot fix it, or you skip one, say so in the PR body. 
 - End every commit message with:
   `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`
 
-## 8. Push and open the PR
+## 8. Sync, push, and open the PR
 
+The team uses a PR-based workflow (see Git Workflow in `CLAUDE.md`). `main` is never committed to directly.
+
+- Bring in the latest main: `git fetch origin && git merge origin/main`. Resolve conflicts carefully (ask the user if a conflict is non-trivial), then re-run `npm run lint`, `npm run build`, and `npm test` if the merge changed anything.
 - `git push -u origin <branch>`
-- Open the PR against `main` with `gh pr create`, passing the body via a heredoc. The body must **mirror `plan.md`**: reuse its sections in the same order and wording (Summary, Proposed changes, Likely locations, Out of scope, Risks & open questions, Tests, Verification), omitting only the `# Plan:` title and the Branch/Type header lines. Before writing the body, re-read `plan.md` and update any section to reflect what was actually built, so the description matches the final code (e.g. corrected file paths, dropped or added items).
+- Read `.github/pull_request_template.md` and fill in **its** sections, so CI and reviewers see the expected format. Open the PR against `main` with `gh pr create`, passing the body via a heredoc (use a quoted `'EOF'` and no backslash escapes). The template sections hold the reader-facing summary, and the rest of the plan follows under "Plan details" so the description still **mirrors `plan.md`**. Re-read `plan.md` first and update it to what was actually built (corrected paths, dropped or added items).
 
 ```markdown
-## Summary
-<from plan.md>
+## What changed and why
+<plan.md Summary + Proposed changes, in plain words, reflecting what was actually done>
 
-## Proposed changes
-<from plan.md, updated to what was actually done>
+## How to test
+<numbered steps a reviewer can follow on the Vercel preview link or locally, drawn from plan.md Verification>
 
-## Likely locations
+## Screenshots
+<only if the change is visible; otherwise delete this section>
+
+## Where I'd like a closer look
+<plan.md Risks & open questions, with resolved items marked resolved; any deviations from the plan>
+
+## Plan details
+### Likely locations
 <table from plan.md, corrected to the files actually changed>
 
-## Out of scope
+### Out of scope
 <from plan.md>
 
-## Risks & open questions
-<from plan.md, with resolved items marked resolved>
-
-## Tests
+### Tests
 <from plan.md, listing the test files actually added>
 
-## Verification
+### Verification
 - [x] `npm run lint`
 - [x] `npm run build`
 - [x] `npm test`
 - [ ] <anything not run, with the reason>
 
-## Deviations from plan
+### Deviations from plan
 <only if the implementation differed from the approved plan; otherwise "None">
+
+## Checklist
+- [ ] I tried the change myself, on the preview link or locally
+- [x] This PR has one purpose (unrelated changes are in separate branches)
+- [x] No keys, passwords, or `.env` values are included
+- [ ] If this changes the database: applied to staging first, tested as each role (Author, Reviewer, Coordinator), new tables have row-level security on <check only if it applies, otherwise write "No database changes">
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 ```
 
+- Only tick checklist items that are true. Leave "I tried the change myself" unchecked unless it was actually run; tell the user to tick it after trying the preview.
 - Title: imperative and under 70 characters, matching the commit style.
-- Do not use `--force`, and do not merge the PR.
+- Do not use `--force`, and do not merge the PR. Merging is done by a teammate with **Squash and merge** after CI (lint, type-check, extension type-check, tests, extension build) and the Vercel preview pass; the author cannot approve their own PR.
 
 ## 9. Report
 
-Tell the user the branch name, the PR URL, what was verified, and anything deviating from the plan. Mention the path of the committed plan log.
+Tell the user the branch name, the PR URL, what was verified, and anything deviating from the plan. Remind them a teammate must review and squash-merge, and that after merging they should delete the branch (`git switch main && git pull && git branch -D <branch> && git fetch --prune`) and verify the change on the environment `main` deploys to. Mention the path of the committed plan log.

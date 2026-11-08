@@ -1204,6 +1204,7 @@ async function routeToReview() {
   if (!target) {
     target = pickFallbackReview(assignments, saved, pageMatch);
   }
+  if (!target) { renderContent('no-assignments'); return; }
 
   // Persist now so the correct review is restored after any Torus login/enroll
   // navigation (sessionStorage survives same-origin navigations in this tab).

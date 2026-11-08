@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest'
 
-type Listener = (...args: any[]) => any
+type Listener = (...args: unknown[]) => unknown
 const store: Record<string, unknown> = {}
 const listeners: Record<string, Listener> = {}
 const mk = (name: string) => ({ addListener: (fn: Listener) => { listeners[name] = fn } })
@@ -12,7 +12,7 @@ beforeAll(async () => {
     runtime: { onMessage: mk('message') },
     storage: {
       local: {
-        get: async (key: any) => {
+        get: async (key: unknown) => {
           if (typeof key === 'string') return key in store ? { [key]: store[key] } : {}
           return { ...store }
         },
@@ -27,10 +27,10 @@ beforeAll(async () => {
 beforeEach(() => { for (const k of Object.keys(store)) delete store[k] })
 
 const navigate = (tabId: number, url: string, frameId = 0) =>
-  listeners.nav({ tabId, url, frameId })
+  (listeners.nav as (e: unknown) => void)({ tabId, url, frameId })
 const consume = (tabId: number) =>
-  new Promise<any>(resolve =>
-    listeners.message({ type: 'CONSUME_DEEP_LINK' }, { tab: { id: tabId } }, resolve))
+  new Promise<{ data: { reviewId: string } | null }>(resolve =>
+    (listeners.message as (...a: unknown[]) => void)({ type: 'CONSUME_DEEP_LINK' }, { tab: { id: tabId } }, resolve))
 const flush = () => new Promise(r => setTimeout(r, 0))
 
 describe('background deep-link capture', () => {
@@ -52,22 +52,22 @@ describe('background deep-link capture', () => {
     navigate(1, 'https://proton.oli.cmu.edu/x?oer_review_id=A')
     navigate(2, 'https://proton.oli.cmu.edu/x?oer_review_id=B')
     await flush()
-    expect((await consume(1)).data.reviewId).toBe('A')
-    expect((await consume(2)).data.reviewId).toBe('B')
+    expect((await consume(1)).data?.reviewId).toBe('A')
+    expect((await consume(2)).data?.reviewId).toBe('B')
     expect((await consume(3)).data).toBeNull()
   })
 
   it('consumes exactly once', async () => {
     navigate(1, 'https://proton.oli.cmu.edu/x?oer_review_id=A')
     await flush()
-    expect((await consume(1)).data.reviewId).toBe('A')
+    expect((await consume(1)).data?.reviewId).toBe('A')
     expect((await consume(1)).data).toBeNull()
   })
 
   it("clears a tab's pending link when the tab closes", async () => {
     navigate(5, 'https://proton.oli.cmu.edu/x?oer_review_id=A')
     await flush()
-    listeners.removed(5)
+    ;(listeners.removed as (id: number) => void)(5)
     await flush()
     expect((await consume(5)).data).toBeNull()
   })

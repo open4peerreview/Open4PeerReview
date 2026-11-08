@@ -1,68 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { detectPlatform, detectPlatformFromHtml, isValidOerUrl } from '@/lib/oer-platform'
+import { rewriteHtml } from '@/lib/snapshot-rewrite'
 
 // Origin used when a snapshot is served without a ?src= hint (legacy snapshots).
 const DEFAULT_ORIGIN = 'https://openstax.org'
-
-// Per-platform CSS that disables in-content navigation links, so a reviewer
-// can't click out of the snapshot into the live site inside the iframe.
-// Selectors are additive — each platform's chapter/page-nav markup differs.
-const NAV_DISABLE_RULES: Record<string, string> = {
-  // OpenStax book-page links (Next/Previous chapter) all match /books/…/pages/…
-  OpenStax: `
-  a[href^="/books"],
-  a[href*="openstax.org/books"],
-  a[href^="/l/"],
-  .os-raise-nav a,
-  .os-raise-nav-btn,
-  nav[data-type="chapter-nav"] a,
-  [data-type="next-page"],
-  [data-type="prev-page"]`,
-  // Pressbooks (WordPress-based) reader navigation. Verified against the live
-  // Pressbooks reader theme: prev/next chapter links live in <nav class="nav-reading">,
-  // and the chapter table-of-contents dropdown uses .reading-header__toc /
-  // .block-reading-toc. rel/aria selectors are kept as defensive fallbacks.
-  Pressbooks: `
-  .nav-reading a,
-  .reading-header__toc a,
-  .block-reading-toc a,
-  a[rel="next"],
-  a[rel="prev"],
-  a[rel="prev-chapter"],
-  a[rel="next-chapter"]`,
-}
-
-function navDisableStyle(platform: string): string {
-  const rules = NAV_DISABLE_RULES[platform] ?? NAV_DISABLE_RULES.OpenStax
-  return `<style data-open4pr="nav-disable">
-${rules} {
-    pointer-events: none !important;
-    cursor: not-allowed !important;
-    opacity: 0.45 !important;
-  }
-</style>`
-}
-
-function rewriteHtml(html: string, origin: string, platform: string): string {
-  // Strip all <script> tags — OER platforms (OpenStax's React app, Pressbooks'
-  // WordPress front-end) boot and hydrate over the SSR content, rendering blank
-  // or misbehaving in an iframe context. The SSR'd HTML already contains the
-  // full readable content; no JS needed.
-  let out = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-
-  // Inject <base> tag so relative URLs for CSS/images resolve against the
-  // snapshot's own origin (varies per book on Pressbooks).
-  const baseTag = `<base href="${origin}/">`
-  const navCss = navDisableStyle(platform)
-  if (/<head[^>]*>/i.test(out)) {
-    out = out.replace(/(<head[^>]*>)/i, `$1\n  ${baseTag}\n  ${navCss}`)
-  } else {
-    out = baseTag + navCss + out
-  }
-
-  return out
-}
 
 export async function GET(
   req: NextRequest,
@@ -122,7 +64,7 @@ export async function GET(
   const html = await fileRes.text()
   // Custom-domain Pressbooks isn't recognised by hostname; sniff the markup for nav rules.
   if (platform === 'Other') platform = detectPlatformFromHtml(html) ?? platform
-  const rewritten = rewriteHtml(html, origin, platform)
+  const rewritten = rewriteHtml(html, origin, platform, src && isValidOerUrl(src) ? src : undefined)
 
   return new NextResponse(rewritten, {
     status: 200,

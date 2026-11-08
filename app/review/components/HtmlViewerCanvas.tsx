@@ -663,7 +663,7 @@ export default function HtmlViewerCanvas({
             src={activeSnapshotSrc}
             className="w-full h-full border-0"
             title="OpenStax content"
-            sandbox="allow-same-origin allow-popups"
+            sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
             onLoad={handleIframeLoad}
           />
         )}

@@ -16,6 +16,7 @@
   RangeSelector,
 } from './types';
 import { tokens } from '../../lib/design-system/token-values';
+import { stripSearchParam, isDeepLinkFresh, pickFallbackReview } from './deepLink';
 import latoRegular from './fonts/Lato-Regular.woff2';
 import latoBold from './fonts/Lato-Bold.woff2';
 import newsreaderVariable from './fonts/Newsreader-Variable.woff2';
@@ -35,7 +36,6 @@ let platformUrl = OERHUB_URL;
 
 
 const SESSION_KEY = 'oer_review_id';
-const PENDING_DEEP_LINK_KEY = 'oer_pending_review';
 // How long a captured deep link stays valid — long enough to survive a Torus
 // login/enroll round-trip, short enough that a later manual visit isn't hijacked.
 const DEEP_LINK_TTL_MS = 5 * 60 * 1000;
@@ -1145,13 +1145,14 @@ function stopAccessWatcher() {
 // pending "scroll to annotation" id. Consumed once so it can't hijack later visits.
 async function recoverDeepLinkFromStorage() {
   try {
-    const data = await chrome.storage.local.get(PENDING_DEEP_LINK_KEY) as Record<string, unknown>;
-    const pending = data[PENDING_DEEP_LINK_KEY] as
-      { reviewId?: string | null; annotationId?: string | null; ts?: number } | undefined;
+    // Tab-scoped and consumed by the background, so another tab's launch can't leak in.
+    const resp = await send<
+      { reviewId?: string | null; annotationId?: string | null; ts?: number } | null
+    >({ type: 'CONSUME_DEEP_LINK' });
+    const pending = resp.success ? resp.data : null;
     if (!pending) return;
-    // Consume it regardless of freshness so a stale record can't linger.
-    await chrome.storage.local.remove(PENDING_DEEP_LINK_KEY);
-    if (typeof pending.ts !== 'number' || Date.now() - pending.ts > DEEP_LINK_TTL_MS) return;
+    // Consumed regardless of freshness so a stale record can't linger.
+    if (!isDeepLinkFresh(pending, Date.now(), DEEP_LINK_TTL_MS)) return;
     if (pending.reviewId) deepLinkReviewId = pending.reviewId;
     if (pending.annotationId) {
       try { sessionStorage.setItem(GOTO_ANN_KEY, pending.annotationId); } catch { /* storage unavailable */ }
@@ -1176,7 +1177,9 @@ async function routeToReview() {
   // then opening OER B in the same tab would reopen A's rubric (wrong OER entirely).
   // The URL param is authoritative when still present; otherwise fall back to the
   // deep link the background captured before any redirect stripped the params.
-  const urlReviewId = new URLSearchParams(window.location.search).get('oer_review_id') || deepLinkReviewId;
+  // The URL param is captured once in init() and stripped, so deepLinkReviewId is
+  // the only deep-link source here and is cleared once the review opens.
+  const urlReviewId = deepLinkReviewId;
   const savedId = sessionStorage.getItem(SESSION_KEY);
   const saved = savedId ? assignments.find(a => a.id === savedId) : undefined;
   const pageMatch = resolveAssignmentForCurrentPage(assignments);
@@ -1199,14 +1202,7 @@ async function routeToReview() {
     }
   }
   if (!target) {
-    if (pageMatch) {
-      // Keep the reviewer's chosen rubric only when it belongs to this OER.
-      target = saved && saved.document_id === pageMatch.document_id ? saved : pageMatch;
-    } else {
-      // Page isn't a recognized assigned OER — restore the session, else pick the
-      // reviewer's most actionable assignment rather than asking them to choose.
-      target = saved ?? assignments.find(a => a.status === 'in_progress') ?? assignments[0];
-    }
+    target = pickFallbackReview(assignments, saved, pageMatch);
   }
 
   // Persist now so the correct review is restored after any Torus login/enroll
@@ -1223,6 +1219,9 @@ async function routeToReview() {
   }
 
   stopAccessWatcher();
+  // Deep link fulfilled: from now on the tab's own selection (sessionStorage) rules,
+  // so a later rubric-tab switch isn't overridden by the original link.
+  deepLinkReviewId = null;
   await selectReview(target.id);
 }
 
@@ -3511,6 +3510,18 @@ async function init() {
       + (urlParams.toString() ? '?' + urlParams.toString() : '')
       + window.location.hash;
     window.history.replaceState({}, '', clean);
+  }
+
+  // ?oer_review_id=<reviewId> — capture once and strip so it can't re-hijack later
+  // routing (reloads, history, copied URLs) after the reviewer switches rubrics.
+  const reviewParam = stripSearchParam(
+    window.location.pathname, urlParams.toString() ? '?' + urlParams.toString() : '',
+    window.location.hash, 'oer_review_id',
+  );
+  if (reviewParam.value) {
+    deepLinkReviewId = reviewParam.value;
+    urlParams.delete('oer_review_id');
+    window.history.replaceState({}, '', reviewParam.cleanUrl);
   }
 
   // Recover the deep-link intent captured pre-redirect (survives Torus login),

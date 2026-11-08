@@ -43,13 +43,18 @@ chrome.webNavigation.onBeforeNavigate.addListener(
     const reviewId = url.searchParams.get('oer_review_id');
     const annotationId = url.searchParams.get('oer_goto');
     if (reviewId || annotationId) {
+      // Scoped to the navigating tab so another Torus tab can't consume it.
       chrome.storage.local.set({
-        [PENDING_DEEP_LINK_KEY]: { reviewId, annotationId, ts: Date.now() },
+        [`${PENDING_DEEP_LINK_KEY}:${details.tabId}`]: { reviewId, annotationId, ts: Date.now() },
       });
     }
   },
   { url: [{ hostContains: 'proton.oli.cmu.edu' }] },
 );
+
+chrome.tabs.onRemoved.addListener((tabId) => {
+  chrome.storage.local.remove(`${PENDING_DEEP_LINK_KEY}:${tabId}`);
+});
 
 // ── Message handler ───────────────────────────────────────────────────────────
 
@@ -80,6 +85,15 @@ async function handleMessage(
     case 'LOGOUT':
       await chrome.storage.local.remove('auth');
       return { success: true };
+
+    case 'CONSUME_DEEP_LINK': {
+      const tabId = sender.tab?.id;
+      if (tabId === undefined) return { success: true, data: null };
+      const key = `${PENDING_DEEP_LINK_KEY}:${tabId}`;
+      const stored = await chrome.storage.local.get(key);
+      await chrome.storage.local.remove(key);
+      return { success: true, data: stored[key] ?? null };
+    }
 
     case 'CAPTURE_TAB': {
       const tabId = sender.tab?.id;

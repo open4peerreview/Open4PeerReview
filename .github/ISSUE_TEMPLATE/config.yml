@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: GitHub Issue Guide (team guide)
+    url: https://docs.google.com/document/d/1hno-eFG0AXG5p8st-6VvkihY64NS0rok-tCeR2PXEpM/edit?tab=t.nu7ums381q8z
+    about: Labels, templates, triage and the issue → branch → PR flow.
+  - name: Dev Workflow + Git Hygiene
+    url: https://docs.google.com/document/d/1hno-eFG0AXG5p8st-6VvkihY64NS0rok-tCeR2PXEpM/edit?tab=t.rf7fg5502mph
+    about: Branches, pull requests and staging.

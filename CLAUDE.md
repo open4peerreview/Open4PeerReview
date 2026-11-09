@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 The OER Certification Hub is a peer review platform for Open Educational Resources (OER), built in partnership with CMU's Open Learning Initiative (OLI) and Maricopa Community Colleges. It replaces a slow, email-based review process with an automated "Certification Hub" using standardized rubrics and digital stamps.
 
 **Repository:** github.com/allimaeeee/Open4PeerReview
-**Prototype (Vercel):** https://oerhub.vercel.app/author
+**Production (Vercel):** https://annotation-platform-seven.vercel.app (the older `oerhub.vercel.app` URL is stale)
 **Status:** Active development. Core review workflows are built and functional — author/reviewer dashboards, the reviewer console, the review report (author feedback view), the OER submission flow, onboarding, and settings. Current focus: a new browser-extension-based review workflow for interactive OER (starting with OLI Torus) that can't be ingested and rendered directly into the platform, plus bringing that extension's visual design in line with the platform's design tokens.
 **Program:** METALS Capstone (7-month project, spring + summer 2026)
 **Process:** Lean development with iterative Build–Measure–Learn cycles across multiple MVP releases (Discover → Ideate → Release → Rediscover)
@@ -214,16 +214,47 @@ The browser extension (`extension/`) is a separate codebase: vanilla TypeScript 
 
 ## Git Workflow
 
-### Branching Strategy
-- `main` — always stable and deployable; Vercel production deploys from this branch.
-- `testing` — backend-complete, stable branch (Alli's working branch for wiring pages to Supabase).
-- `design/[feature-name]` — active frontend work in progress (Sara's branches), pulled from `testing`, merged forward once complete.
+The team moved to a PR-based workflow in October 2026. The full guide, with commands and screenshots, is the team's "Dev Workflow + Git Hygiene" Google Doc. This section is the short version. If the two disagree, the Google Doc wins; update this section to match.
 
-No pull-request requirement — this is a two-person dev/design pair, so review happens through direct conversation and Vercel preview checks rather than formal PRs.
+### Branches
+- `main` is the only permanent branch. Nobody commits to it directly: every change goes through a pull request.
+- Each change gets a short-lived branch cut from the latest `main`, and the branch is deleted after it merges.
+  - `feature/<name>` — new functionality, or design/content updates to existing screens (e.g. `feature/reviewer-dashboard`).
+  - `fix/<name>` — something that used to work and broke, or never worked as intended (e.g. `fix/login-bug`).
+- Names are lowercase, hyphen-separated, short but specific.
+- One purpose per branch. If you notice an unrelated problem mid-work, open a separate `fix/` branch for it. Aim to merge within days, not weeks.
+- Before starting, check open branches/PRs so two branches don't edit the same files at once.
+- The old `testing`, `dev`, and `design/*` branches are gone. Don't recreate them.
 
-### Commit Messages
-- Start with a verb: "Add author dashboard layout", "Fix rubric accordion state", "Update spacing tokens"
-- Reference the relevant page or feature area when it helps clarify scope
+### Step by step
+1. Start clean: `git status` shows nothing to commit.
+2. `git switch main && git pull && git switch -c <branch-name>`
+3. Commit at points that make sense on their own. Messages are short and start with a verb ("Fix score hydration on tab switch", "Add reviewer dashboard layout").
+4. Before opening a PR, bring in the latest main: `git fetch && git merge origin/main`, then resolve any conflicts.
+5. Push: `git push -u origin <branch-name>` the first time, then `git push`. Push at least at the end of each work session.
+6. Open a PR against `main` only when the change is finished. Fill in `.github/pull_request_template.md`: what changed and why, how to test, screenshots if visible. For early feedback, share the preview link or a screenshot instead.
+7. CI (`.github/workflows/ci.yml`: lint, type-check, extension type-check, tests, extension build) and the Vercel preview must pass. Then ask a teammate to review. You can't approve your own PR.
+8. Merge with **Squash and merge**. Check that the squash title describes the whole change.
+9. Clean up: `git switch main && git pull && git branch -D <branch-name> && git fetch --prune`.
+10. Verify the change on the environment that `main` deploys to, then tell the team. Don't merge the next change until the previous one is verified.
+
+### Review
+- Reviewers aim to respond within two working days. Read the description, try the preview link, then read "Files changed".
+- Check that the PR does what it says and nothing else, is easy to follow, and follows project conventions (e.g. semantic tokens, not hardcoded colors).
+- Mark optional comments "Suggestion:". Submit with Approve, Request changes, or Comment.
+- Keep PRs readable in 10–20 minutes. Split anything bigger.
+
+### Environments and releases
+- Decided at the Oct 7, 2026 team meeting: two environments, because the Supabase free plan allows two projects.
+  - **dev**: `main` auto-deploys here, and this is where QA happens.
+  - **prod**: deploys only from a tagged release (SemVer, e.g. `v1.4.0`), so prod runs exactly what QA tested.
+- **Setup status is not yet confirmed in this file.** Until the team confirms that a separate dev Supabase project and dev Vercel deployment exist, assume the hosted Supabase project in `.mcp.json` holds **real data**. Ask before running anything locally that writes to it, and never apply schema changes to it directly.
+
+### Rules for AI agents (Claude Code, Cursor, etc.)
+- Never commit or push to `main`, force-push, or delete remote branches. Branch protection on `main` is meant to block these too.
+- Don't merge PRs. A human merges after review.
+- Never commit `.env*` files, keys, or tokens. The anon key is the only Supabase key that may appear in client or extension code.
+- Keep each PR to the one purpose of its branch. Note out-of-scope problems in the PR description instead of fixing them there.
 
 ---
 

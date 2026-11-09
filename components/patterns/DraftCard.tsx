@@ -1,3 +1,4 @@
+import { ResourceLink } from '@/components/ui/ResourceLink'
 import { Button } from '@/components/ui/Button'
 
 function cx(...parts: (string | false | null | undefined)[]) {
@@ -16,6 +17,7 @@ export interface DraftCardProps {
 }
 
 export function DraftCard({
+  id,
   title,
   platform,
   rubrics,
@@ -61,12 +63,7 @@ export function DraftCard({
             'flex items-center gap-4 text-body-sm text-text-secondary flex-wrap',
             rubrics.length > 0 ? 'mt-1.5' : 'mt-2',
           )}>
-            <span className="flex items-center gap-1">
-              <svg viewBox="0 0 16 16" fill="none" className="w-3.5 h-3.5 shrink-0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M6 3H3a1 1 0 00-1 1v9a1 1 0 001 1h9a1 1 0 001-1v-3M9 2h5v5M14 2L7 9" />
-              </svg>
-              {platform}
-            </span>
+            <ResourceLink documentId={id} label={platform} />
             <span className="flex items-center gap-1">
               <svg viewBox="0 0 16 16" fill="none" className="w-3.5 h-3.5 shrink-0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="2" y="4" width="12" height="10" rx="1" />

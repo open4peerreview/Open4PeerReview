@@ -39,7 +39,7 @@ export function Checkbox({
 }: CheckboxProps) {
   return (
     <span className={cx(
-      'inline-flex items-center justify-center',
+      'relative inline-flex items-center justify-center',
       disabled && 'opacity-40 cursor-not-allowed',
       className,
     )}>

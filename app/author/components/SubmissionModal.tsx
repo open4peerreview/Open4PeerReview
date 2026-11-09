@@ -15,6 +15,8 @@ import { SelectionCard } from '@/components/ui/SelectionCard'
 import { StepIndicator } from '@/components/ui/StepIndicator'
 import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog'
 import { isValidOerUrl, isTorusUrl } from '@/lib/oer-platform'
+import { mergeChapterPages } from '@/lib/oer-toc'
+import { ChapterPicker } from '@/components/patterns/ChapterPicker'
 
 type SourceTab = 'pdf' | 'openstax' | 'torus'
 
@@ -553,6 +555,16 @@ export function SubmissionModal({
             value={openstaxUrl}
             onChange={e => { setOpenstaxUrl(e.target.value); touch() }}
             disabled={loading}
+          />
+          <ChapterPicker
+            url={openstaxUrl}
+            disabled={loading}
+            onAdd={urls => {
+              const { mainUrl, extraUrls } = mergeChapterPages(additionalPageUrls, urls)
+              setOpenstaxUrl(mainUrl)
+              setAdditionalPageUrls(extraUrls)
+              touch()
+            }}
           />
           {additionalPageUrls.map((pageUrl, i) => (
             <div key={i} className="flex items-end gap-2">

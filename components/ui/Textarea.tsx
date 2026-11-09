@@ -66,6 +66,7 @@ export function Textarea({
           'placeholder:text-text-secondary placeholder:opacity-50',
           'transition-colors duration-[var(--transition-duration-fast)]',
           'disabled:text-text-muted disabled:cursor-not-allowed disabled:opacity-60',
+          'read-only:cursor-default read-only:select-text',
           resizeClass,
           error ? 'border-error focus:border-error' : variantClass,
           className,

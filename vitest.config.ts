@@ -10,6 +10,7 @@ export default defineConfig({
       'app/api/snapshot/__tests__/**/*.test.ts',
       'app/api/documents/__tests__/**/*.test.ts',
       'components/**/__tests__/**/*.test.tsx',
+      'tests/**/*.test.ts',
     ],
   },
   resolve: {

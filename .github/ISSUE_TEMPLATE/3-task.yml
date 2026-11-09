@@ -1,0 +1,56 @@
+name: Design, chore or discovery task
+description: Visual or copy changes, CI/docs/config work, or research before building.
+labels: ["status/needs-triage"]
+body:
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type
+      description: Add the matching type/ label too (or the triager will).
+      options:
+        - type/design — visual or copy change; behavior stays the same
+        - type/chore — CI, docs, build or config; no user-facing change
+        - type/discovery — research or a design pass needed before building
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What needs doing, and why.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      multiple: true
+      options:
+        - area/ingestion
+        - area/extension
+        - area/review-console
+        - area/report-revision
+        - area/dashboards
+        - area/coordinator
+        - area/infra
+        - area/database
+    validations:
+      required: true
+
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: For discovery, name the output (e.g. a workflow diagram shared with the team).
+      value: |
+        - [ ]
+    validations:
+      required: true
+
+  - type: textarea
+    id: links
+    attributes:
+      label: Links
+      description: Figma frame, meeting notes, related issues.

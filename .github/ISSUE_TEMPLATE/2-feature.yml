@@ -1,0 +1,97 @@
+name: Feature request
+description: New functionality, or a change to how a flow works.
+title: "[Feature] "
+labels: ["type/feature", "status/needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Title tip: start with a verb, e.g. "Add rubric filter to reviewer dashboard".
+        Too big for one PR? Split it into smaller issues and link them here.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What should change, and why. Who is it for?
+      placeholder: Coordinators need to submit an OER on an author's behalf so they don't have to switch accounts.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: role
+    attributes:
+      label: Who is it for?
+      multiple: true
+      options:
+        - Author
+        - Reviewer
+        - Coordinator
+        - Student reviewer
+        - Adopter / public visitor
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Add the matching area/ label too (or the triager will).
+      multiple: true
+      options:
+        - area/ingestion
+        - area/extension
+        - area/review-console
+        - area/report-revision
+        - area/dashboards
+        - area/coordinator
+        - area/infra
+        - area/database
+    validations:
+      required: true
+
+  - type: dropdown
+    id: source
+    attributes:
+      label: Where did this come from?
+      options:
+        - Team idea
+        - Client request (source/client)
+        - Internal QA (source/internal-qa)
+        - User testing (source/user-testing)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority (your guess, confirmed at triage)
+      options:
+        - P0 — breaks the core journey or blocks client testing
+        - P1 — wrong or missing, but there is a workaround
+        - P2 — polish or nice to have
+    validations:
+      required: true
+
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: What the reviewer will check in the PR. Each item should be something you can see or click.
+      value: |
+        - [ ]
+    validations:
+      required: true
+
+  - type: textarea
+    id: links
+    attributes:
+      label: Links
+      description: Figma frame, FigJam flow, meeting notes, related issues (#12).
+
+  - type: checkboxes
+    id: database
+    attributes:
+      label: Database
+      options:
+        - label: This needs a schema, migration or RLS change (add area/database and apply to staging first)

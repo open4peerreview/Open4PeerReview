@@ -1,0 +1,118 @@
+name: Bug report
+description: Something that should work doesn't.
+title: "[Bug] "
+labels: ["type/bug", "status/needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Write it so a teammate can fix it without messaging you.
+        Title tip: describe what is broken, e.g. "Login button does nothing on Safari".
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What is broken, and why it matters.
+      placeholder: Reviewers lose their rubric scores after clicking Continue Review.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Log in as a reviewer
+        2. Submit the Accessibility rubric
+        3. Click Continue Review
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected
+      placeholder: Submitted rubric shows 8/8 with comments kept.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual
+      placeholder: Rubric shows 0/8.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: role
+    attributes:
+      label: Account role
+      multiple: true
+      options:
+        - Author
+        - Reviewer
+        - Coordinator
+        - Student reviewer
+        - Logged out / public visitor
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Add the matching area/ label too (or the triager will).
+      multiple: true
+      options:
+        - area/ingestion
+        - area/extension
+        - area/review-console
+        - area/report-revision
+        - area/dashboards
+        - area/coordinator
+        - area/infra
+        - area/database
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority (your guess, confirmed at triage)
+      options:
+        - P0 — breaks the core journey or blocks client testing
+        - P1 — wrong or missing, but there is a workaround
+        - P2 — polish or nice to have
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Browser and device, plus staging or production.
+      placeholder: Chrome 131, MacBook, staging
+
+  - type: input
+    id: oer
+    attributes:
+      label: OER or task link
+      placeholder: https://...
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Screenshots or recording
+      description: Drag files in here. Add the QA Checklist case ID if this came from QA (e.g. Q03).
+
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: What the reviewer will check in the PR. Each item should be something you can see or click.
+      value: |
+        - [ ]
+    validations:
+      required: true

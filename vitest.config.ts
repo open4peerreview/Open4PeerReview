@@ -8,6 +8,8 @@ export default defineConfig({
       'features/ai-chat/__tests__/**/*.test.ts',
       'lib/__tests__/**/*.test.ts',
       'app/api/snapshot/__tests__/**/*.test.ts',
+      'app/api/documents/__tests__/**/*.test.ts',
+      'components/**/__tests__/**/*.test.tsx',
       'tests/**/*.test.ts',
     ],
   },

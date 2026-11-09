@@ -1223,6 +1223,7 @@ export function ReviewerConsole({
       )}
       <ResizablePanelLayout
         defaultLeftPercent={50}
+        minLeftWidth={320}
         leftPanel={
           <div className="h-full overflow-hidden print:hidden">
             {document.platform === 'OLI Torus' ? (

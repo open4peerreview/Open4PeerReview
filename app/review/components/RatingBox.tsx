@@ -69,6 +69,7 @@ export function RatingBox({
 
   const firstCommentRef = useRef(comments?.[0] ?? null)
   const isActiveRef = useRef(isActive)
+  const isReadOnlyRef = useRef(isReadOnly)
   const onAddRef = useRef(onAddComment)
   const onEditRef = useRef(onEditComment)
   const onDeleteRef = useRef(onDeleteComment)
@@ -77,6 +78,7 @@ export function RatingBox({
 
   useEffect(() => { firstCommentRef.current = comments?.[0] ?? null }, [comments])
   useEffect(() => { isActiveRef.current = isActive }, [isActive])
+  useEffect(() => { isReadOnlyRef.current = isReadOnly }, [isReadOnly])
   useEffect(() => { onAddRef.current = onAddComment }, [onAddComment])
   useEffect(() => { onEditRef.current = onEditComment }, [onEditComment])
   useEffect(() => { onDeleteRef.current = onDeleteComment }, [onDeleteComment])
@@ -98,6 +100,7 @@ export function RatingBox({
   // DB save — longer debounce to avoid excess writes
   useEffect(() => {
     const timer = setTimeout(() => {
+      if (isReadOnlyRef.current) return
       const trimmed = localText.trim()
       const existing = firstCommentRef.current
       if (!trimmed) {
@@ -122,12 +125,12 @@ export function RatingBox({
       <span className={labelClass}>{LABELS[variant]}</span>
       <Textarea
         variant={TEXTAREA_VARIANTS[variant]}
-        placeholder={PLACEHOLDERS[variant]}
         value={localText}
-        onChange={e => setLocalText(e.target.value)}
+        onChange={isReadOnly ? undefined : e => setLocalText(e.target.value)}
         rows={4}
         resize="none"
-        disabled={isReadOnly}
+        readOnly={isReadOnly}
+        placeholder={isReadOnly && !localText.trim() ? '' : PLACEHOLDERS[variant]}
         onFocus={onTextareaFocus}
         onBlur={onTextareaBlur}
         className="flex-1 bg-transparent [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-secondary/40 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb:hover]:bg-secondary/60"

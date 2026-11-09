@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { ResourceLink } from '@/components/ui/ResourceLink'
 import { Accordion } from '@/components/ui/Accordion'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { StepIndicator } from '@/components/ui/StepIndicator'
@@ -145,12 +146,7 @@ export function CoordinatorReviewCard({
 
               {/* Row 3: platform + date */}
               <div className="flex items-center gap-4 mt-2 text-body-sm text-text-secondary flex-wrap">
-                <span className="flex items-center gap-1">
-                  <svg viewBox="0 0 16 16" fill="none" className="w-3.5 h-3.5 shrink-0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M6 3H3a1 1 0 00-1 1v9a1 1 0 001 1h9a1 1 0 001-1v-3M9 2h5v5M14 2L7 9" />
-                  </svg>
-                  {platform}
-                </span>
+                <ResourceLink documentId={id} label={platform} />
                 <span className="flex items-center gap-1">
                   <svg viewBox="0 0 16 16" fill="none" className="w-3.5 h-3.5 shrink-0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <rect x="2" y="4" width="12" height="10" rx="1" />

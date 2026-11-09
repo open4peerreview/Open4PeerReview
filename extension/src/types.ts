@@ -131,6 +131,7 @@ export interface StoredAuth {
 
 export type BackgroundMessageType =
   | 'CAPTURE_TAB'
+  | 'CONSUME_DEEP_LINK'
   | 'UPLOAD_SCREENSHOT'
   | 'SAVE_ANNOTATION'
   | 'UPDATE_ANNOTATION'

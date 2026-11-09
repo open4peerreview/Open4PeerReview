@@ -20,6 +20,7 @@ import {
   setRevisedLink,
 } from '@/lib/supabase/authorFeedback'
 import { OerReadOnlyViewer } from './OerReadOnlyViewer'
+import { toOerPages } from '@/lib/oer-pages'
 import { TorusReadOnlyViewer } from './TorusReadOnlyViewer'
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -664,7 +665,7 @@ export function ConsoleRevisionView({
               annotations={allAnnotations}
               scrollToAnnotationId={scrollToAnnotationId}
               rubricItems={rubricItems}
-              additionalPages={document.pages as { fingerprint: string | null; url?: string }[] | undefined}
+              additionalPages={toOerPages(document.pages)}
               onViewFullComment={(rubricItemId) => {
                 setExpandedCards(prev => ({ ...prev, [rubricItemId]: true }))
                 setTimeout(() => {

@@ -104,7 +104,8 @@ export function detectPlatformFromHtml(html: string): string | null {
   const head = html.slice(0, 200_000)
   if (/<meta[^>]+name=["']generator["'][^>]+content=["'][^"']*pressbooks/i.test(head)) return 'Pressbooks'
   if (/<meta[^>]+content=["'][^"']*pressbooks[^"']*["'][^>]+name=["']generator["']/i.test(head)) return 'Pressbooks'
-  if (/\/wp-content\/(?:themes|plugins)\/pressbooks/i.test(head)) return 'Pressbooks'
+  // Some Pressbooks networks (including Maricopa) serve WordPress assets under /app.
+  if (/\/(?:wp-content|app)\/(?:themes|plugins)\/pressbooks/i.test(head)) return 'Pressbooks'
   return null
 }
 

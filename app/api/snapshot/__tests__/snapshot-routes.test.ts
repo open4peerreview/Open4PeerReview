@@ -190,11 +190,11 @@ describe('GET /api/snapshot/[fingerprint] — nav rules & base origin', () => {
     expect(await (await call('https://open.maricopa.edu/')).text()).not.toContain('alert(1)')
   })
 
-  it('keeps the declared Pressbooks player URL as inert snapshot metadata', async () => {
+  it('keeps Maricopa’s declared H5P player URL without a generator tag', async () => {
     const source = 'https://open.maricopa.edu/com225/h5p-listing/'
     const url = 'https://open.maricopa.edu/com225/wp-admin/admin-ajax.php?action=h5p_embed&id=4'
     const integration = JSON.stringify({ contents: { 'cid-4': { url, title: 'Speaking $& <activity>' } } })
-    serve(`<html><head><meta name="generator" content="Pressbooks">
+    serve(`<html><head><link rel="stylesheet" href="https://open.maricopa.edu/app/themes/pressbooks-book/assets/dist/assets/book-CIDUA1kK.css">
       <script>H5PIntegration = ${integration};</script><script src="/runtime.js"></script>
       </head><body><iframe src="about:blank" data-content-id="4"></iframe></body></html>`)
     const response = await call(source)

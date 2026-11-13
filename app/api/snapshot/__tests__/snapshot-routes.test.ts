@@ -190,6 +190,27 @@ describe('GET /api/snapshot/[fingerprint] — nav rules & base origin', () => {
     expect(await (await call('https://open.maricopa.edu/')).text()).not.toContain('alert(1)')
   })
 
+  it('keeps the declared Pressbooks player URL as inert snapshot metadata', async () => {
+    const source = 'https://open.maricopa.edu/com225/h5p-listing/'
+    const url = 'https://open.maricopa.edu/com225/wp-admin/admin-ajax.php?action=h5p_embed&id=4'
+    const integration = JSON.stringify({ contents: { 'cid-4': { url, title: 'Speaking $& <activity>' } } })
+    serve(`<html><head><meta name="generator" content="Pressbooks">
+      <script>H5PIntegration = ${integration};</script><script src="/runtime.js"></script>
+      </head><body><iframe src="about:blank" data-content-id="4"></iframe></body></html>`)
+    const response = await call(source)
+    const html = await response.text()
+    const metadata = /<script type="application\/json" id="o4pr-h5p-metadata" data-open4pr="h5p">([^<]+)<\/script>/.exec(html)
+    expect(metadata).not.toBeNull()
+    expect(JSON.parse(metadata![1])).toEqual({
+      sourceUrl: source,
+      pressbooks: true,
+      activities: { '4': { url, title: 'Speaking $& <activity>' } },
+    })
+    expect(html).not.toContain('H5PIntegration =')
+    expect(html).not.toContain('/runtime.js')
+    expect(response.headers.get('content-security-policy')).toBe("frame-ancestors 'self'")
+  })
+
   it('ignores an invalid ?src= and uses the legacy OpenStax origin', async () => {
     serve(PLAIN_HTML)
     const html = await (await call('https://127.0.0.1/evil')).text()

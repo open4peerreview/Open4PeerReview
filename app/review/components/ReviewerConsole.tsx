@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation'
 import type { HighlightTag } from '@/types'
 import type { Json } from '@/types/database.types'
 import { PDFViewer, type TextSelection, type AnnotationConfirmPayload } from './PDFViewer'
-import HtmlViewerCanvas, { type HtmlTextSelection } from './HtmlViewerCanvas'
+import HtmlViewerCanvas, { type HtmlTextSelection, type H5pSelection } from './HtmlViewerCanvas'
 import { TorusAnnotationViewer } from './TorusAnnotationViewer'
 import ReviewRightPanel from './ReviewRightPanel'
 import { Modal, ModalContent } from '@/components/ui/Modal'
@@ -21,7 +21,7 @@ import { useReviewSaveStatus } from '@/lib/review-save-context'
 import ResizablePanelLayout from '@/components/layout/ResizablePanelLayout'
 import type { OERDocument, Review, Rubric, RubricItem, ScoreComment, ReviewNotesRow } from './ReviewerApp'
 
-type AnyTextSelection = TextSelection | HtmlTextSelection
+type AnyTextSelection = TextSelection | HtmlTextSelection | H5pSelection
 
 interface ReviewerConsoleProps {
   supabase: SupabaseClient
@@ -540,26 +540,31 @@ export function ReviewerConsole({
       if (!pendingSelection) return
       const { body, rubricItemId, tag } = payload
 
-      const pdfSel = pendingSelection as TextSelection
-      const anchor = 'type' in pendingSelection && pendingSelection.type === 'html'
-        ? {
-            type: 'html-char-offset' as const,
-            pageIndex: pendingSelection.pageIndex,
-            selector: [
-              { type: 'TextPositionSelector' as const, start: pendingSelection.start, end: pendingSelection.end },
-              { type: 'TextQuoteSelector' as const, exact: pendingSelection.text, prefix: pendingSelection.prefix, suffix: pendingSelection.suffix },
-            ],
-          }
-        : {
-            page: pdfSel.page,
-            text: pdfSel.text,
-            rects: pdfSel.rects,
-            pageWidth: pdfSel.pageWidth,
-            containerWidth: pdfSel.containerWidth,
-            selector: [
-              { type: 'TextQuoteSelector' as const, exact: pdfSel.text, prefix: pdfSel.prefix, suffix: pdfSel.suffix },
-            ],
-          }
+      let anchor
+      if ('page' in pendingSelection) {
+        const { page, text, rects, pageWidth, containerWidth, prefix, suffix } = pendingSelection
+        anchor = {
+          page, text, rects, pageWidth, containerWidth,
+          selector: [{ type: 'TextQuoteSelector' as const, exact: text, prefix, suffix }],
+        }
+      } else if (pendingSelection.type === 'h5p') {
+        anchor = {
+          type: 'h5p-activity' as const,
+          pageIndex: pendingSelection.pageIndex,
+          activityKey: pendingSelection.activityKey,
+          text: pendingSelection.text,
+        }
+      } else {
+        const { pageIndex, start, end, text, prefix, suffix } = pendingSelection
+        anchor = {
+          type: 'html-char-offset' as const,
+          pageIndex,
+          selector: [
+            { type: 'TextPositionSelector' as const, start, end },
+            { type: 'TextQuoteSelector' as const, exact: text, prefix, suffix },
+          ],
+        }
+      }
 
       const validItemId = rubricItemId && scores[rubricItemId] ? rubricItemId : null
 
@@ -1254,9 +1259,9 @@ export function ReviewerConsole({
                 onBack={() => { saveDraft().then(() => router.push('/reviewer?tab=my-reviews')) }}
                 rubricItems={activeViewerCriteria}
                 activeItemId={activeItemId}
-                pendingSelection={pendingSelection && 'type' in pendingSelection ? pendingSelection as HtmlTextSelection : null}
+                pendingSelection={pendingSelection && 'type' in pendingSelection ? pendingSelection : null}
                 savedAnnotations={savedAnnotations}
-                onTextSelected={handleTextSelected as (sel: HtmlTextSelection) => void}
+                onTextSelected={handleTextSelected}
                 onAnnotationConfirm={handleAnnotationConfirm}
                 onPendingSelectionClear={handlePendingSelectionClear}
                 onAnnotationEdit={handleAnnotationEditFromPDF}

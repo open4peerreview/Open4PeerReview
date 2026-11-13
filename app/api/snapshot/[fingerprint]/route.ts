@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { readH5pIntegration, type H5pActivity } from '@/lib/h5p'
 import { createClient } from '@/lib/supabase/server'
 import { detectPlatform, detectPlatformFromHtml, isValidOerUrl } from '@/lib/oer-platform'
 
@@ -44,21 +45,28 @@ ${rules} {
 </style>`
 }
 
-function rewriteHtml(html: string, origin: string, platform: string): string {
+function rewriteHtml(html: string, origin: string, platform: string, sourceUrl: string): string {
   // Strip all <script> tags — OER platforms (OpenStax's React app, Pressbooks'
   // WordPress front-end) boot and hydrate over the SSR content, rendering blank
   // or misbehaving in an iframe context. The SSR'd HTML already contains the
   // full readable content; no JS needed.
-  let out = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+  const activities: Record<string, H5pActivity> = {}
+  let out = html.replace(/<script\b[^>]*>([\s\S]*?)<\/script\s*>/gi, (_tag, script: string) => {
+    Object.assign(activities, readH5pIntegration(script, sourceUrl, platform === 'Pressbooks'))
+    return ''
+  })
+  const h5p = JSON.stringify({ sourceUrl, pressbooks: platform === 'Pressbooks', activities })
+    .replace(/</g, '\\u003c')
+  const h5pMetadata = `<script type="application/json" id="o4pr-h5p-metadata" data-open4pr="h5p">${h5p}</script>`
 
   // Inject <base> tag so relative URLs for CSS/images resolve against the
   // snapshot's own origin (varies per book on Pressbooks).
   const baseTag = `<base href="${origin}/">`
   const navCss = navDisableStyle(platform)
   if (/<head[^>]*>/i.test(out)) {
-    out = out.replace(/(<head[^>]*>)/i, `$1\n  ${baseTag}\n  ${navCss}`)
+    out = out.replace(/<head[^>]*>/i, head => `${head}\n  ${baseTag}\n  ${navCss}\n  ${h5pMetadata}`)
   } else {
-    out = baseTag + navCss + out
+    out = baseTag + navCss + h5pMetadata + out
   }
 
   return out
@@ -122,7 +130,7 @@ export async function GET(
   const html = await fileRes.text()
   // Custom-domain Pressbooks isn't recognised by hostname; sniff the markup for nav rules.
   if (platform === 'Other') platform = detectPlatformFromHtml(html) ?? platform
-  const rewritten = rewriteHtml(html, origin, platform)
+  const rewritten = rewriteHtml(html, origin, platform, src && isValidOerUrl(src) ? src : origin)
 
   return new NextResponse(rewritten, {
     status: 200,

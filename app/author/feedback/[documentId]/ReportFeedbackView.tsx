@@ -9,6 +9,7 @@ import { EvidenceCard } from '@/components/ui/EvidenceCard'
 import { ReviewSummaryPanel } from '@/components/ui/ReviewSummaryPanel'
 import ResizablePanelLayout from '@/components/layout/ResizablePanelLayout'
 import { OerReadOnlyViewer } from './OerReadOnlyViewer'
+import { toOerPages } from '@/lib/oer-pages'
 import { TorusReadOnlyViewer } from './TorusReadOnlyViewer'
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -293,7 +294,7 @@ export function ReportFeedbackView({
               annotations={allAnnotations}
               scrollToAnnotationId={scrollToAnnotationId}
               rubricItems={rubricItems}
-              additionalPages={document.pages as { fingerprint: string | null; url?: string }[] | undefined}
+              additionalPages={toOerPages(document.pages)}
               onViewFullComment={(rubricItemId) => {
                 setExpandedCards(prev => ({ ...prev, [rubricItemId]: true }))
                 setTimeout(() => {

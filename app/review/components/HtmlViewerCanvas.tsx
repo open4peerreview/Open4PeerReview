@@ -4,10 +4,12 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import type { HighlightTag } from '@/types'
 import type { ReviewEventType } from '@/hooks/useReviewTracking'
 import type { Json } from '@/types/database.types'
-import { selectionToAnchor, applyHighlights, type TextPositionSelector, type TextQuoteSelector } from '@/lib/anchoring/html'
+import { selectionToAnchor, applyHighlights, clearHighlights, type TextPositionSelector, type TextQuoteSelector } from '@/lib/anchoring/html'
 import { AnnotationPopup } from './AnnotationPopup'
 import { AnnotationHoverCard } from './AnnotationHoverCard'
 import { ViewerPanelHeader } from './ViewerPanelHeader'
+import { SnapshotH5pPlayers } from './SnapshotH5pPlayers'
+import { mountSnapshotActivities, setActivityRowOpen, type SnapshotActivity } from './h5pSnapshot'
 
 // ── Public types ──────────────────────────────────────────────────────────────
 
@@ -18,6 +20,13 @@ export interface HtmlTextSelection {
   end: number
   prefix: string
   suffix: string
+  pageIndex: number
+}
+
+export interface H5pSelection {
+  type: 'h5p'
+  text: string
+  activityKey: string
   pageIndex: number
 }
 
@@ -144,10 +153,10 @@ interface HtmlViewerCanvasProps {
   additionalPages?: OERPage[]
   rubricItems: { id: string; label: string }[]
   activeItemId: string | null
-  pendingSelection: HtmlTextSelection | null
+  pendingSelection: HtmlTextSelection | H5pSelection | null
   savedAnnotations: SavedAnnotation[]
   focusAnnotationId?: string | null
-  onTextSelected: (sel: HtmlTextSelection) => void
+  onTextSelected: (sel: HtmlTextSelection | H5pSelection) => void
   onAnnotationConfirm: (payload: AnnotationConfirmPayload) => Promise<string | null | undefined>
   onPendingSelectionClear: () => void
   onAnnotationEdit: (id: string, changes: { body: string; tag: HighlightTag | null }) => Promise<void>
@@ -227,7 +236,9 @@ export default function HtmlViewerCanvas({
   const isHoveringCardRef = useRef(false)
   const hideTimerRef = useRef<NodeJS.Timeout | null>(null)
 
-  // True once the iframe has loaded and originalHtmlRef is populated
+  const [activities, setActivities] = useState<SnapshotActivity[]>([])
+
+  // True once the snapshot has loaded
   const [iframeReady, setIframeReady] = useState(false)
   // Shown briefly when the user manages to trigger a navigation despite CSS
   const [navBannerVisible, setNavBannerVisible] = useState(false)
@@ -236,7 +247,7 @@ export default function HtmlViewerCanvas({
   useEffect(() => {
     setIframeReady(false)
     setTooltipPos(null)
-    originalHtmlRef.current = null
+    setActivities([])
     onPendingSelectionClear()
   // onPendingSelectionClear is intentionally excluded — stable enough and would loop
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -272,7 +283,9 @@ export default function HtmlViewerCanvas({
   // ── Refs ───────────────────────────────────────────────────────────────────
   const containerRef    = useRef<HTMLDivElement>(null)
   const iframeRef       = useRef<HTMLIFrameElement>(null)
-  const originalHtmlRef = useRef<string | null>(null)
+  const cleanupSnapshotRef = useRef<(() => void) | null>(null)
+
+  useEffect(() => () => cleanupSnapshotRef.current?.(), [])
 
   // Stable callback refs — updated every render so mark handlers never go stale
   const onMarkClickRef   = useRef<(id: string, x: number, y: number) => void>(() => {})
@@ -380,12 +393,12 @@ export default function HtmlViewerCanvas({
   useEffect(() => {
     if (!iframeReady) return
     const doc = iframeRef.current?.contentDocument
-    if (!doc || originalHtmlRef.current === null) return
+    if (!doc) return
 
     const scrollX = doc.defaultView?.scrollX ?? 0
     const scrollY = doc.defaultView?.scrollY ?? 0
 
-    doc.body.innerHTML = originalHtmlRef.current
+    clearHighlights(doc)
 
     const htmlAnns = savedAnnotations
       .filter(a => {
@@ -408,6 +421,34 @@ export default function HtmlViewerCanvas({
 
     doc.defaultView?.scrollTo(scrollX, scrollY)
   }, [savedAnnotations, iframeReady, currentPageIndex])
+
+  const activityNotes = savedAnnotations.filter(a =>
+    a.anchor.type === 'h5p-activity' && a.anchor.pageIndex === currentPageIndex,
+  )
+
+  function openActivityAnnotation(id: string, control: HTMLButtonElement) {
+    const rect = control.getBoundingClientRect()
+    const bounds = containerRef.current?.getBoundingClientRect()
+    if (!bounds) return
+    const annotation = activityNotes.find(a => a.id === id)
+    if (!annotation) return
+    setHoverAnnotation(annotation)
+    setHoverPos({ x: rect.left - bounds.left, y: rect.top - bounds.top })
+  }
+
+  function annotateActivity(activity: SnapshotActivity, control: HTMLButtonElement) {
+    if (disabled) return
+    const bounds = containerRef.current?.getBoundingClientRect()
+    if (!bounds) return
+    const rect = control.getBoundingClientRect()
+    setHoverAnnotation(null)
+    setTooltipPos({
+      x: rect.left + rect.width / 2 - bounds.left,
+      selectionTop: rect.top - bounds.top,
+      selectionBottom: rect.bottom - bounds.top,
+    })
+    onTextSelected({ type: 'h5p', text: activity.title ?? 'H5P activity', activityKey: activity.key, pageIndex: currentPageIndex })
+  }
 
   // ── Navigate to focused annotation: switch page if needed ────────────────
   useEffect(() => {
@@ -432,7 +473,15 @@ export default function HtmlViewerCanvas({
     const t = setTimeout(() => {
       const doc = iframeRef.current?.contentDocument
       if (!doc) return
-      const mark = doc.querySelector(`[data-annotation-id="${focusAnnotationId}"]`) as HTMLElement | null
+      if (ann.anchor.type === 'h5p-activity') {
+        const activity = activities.find(item => item.key === ann.anchor.activityKey)
+        if (activity) {
+          setActivityRowOpen(activity, true)
+          activity.placeholder.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+        return
+      }
+      const mark = [...doc.querySelectorAll<HTMLElement>('[data-annotation-id]')].find(el => el.dataset.annotationId === focusAnnotationId)
       if (!mark) return
       mark.scrollIntoView({ behavior: 'smooth', block: 'center' })
       mark.style.outline = '3px solid rgba(234,179,8,0.7)'
@@ -441,7 +490,7 @@ export default function HtmlViewerCanvas({
       setTimeout(() => { mark.style.outline = ''; mark.style.outlineOffset = '' }, 1500)
     }, 0)
     return () => clearTimeout(t)
-  }, [focusAnnotationId, iframeReady, currentPageIndex, savedAnnotations])
+  }, [focusAnnotationId, iframeReady, currentPageIndex, savedAnnotations, activities])
 
   // ── Wire up iframe after load ──────────────────────────────────────────────
   const handleIframeLoad = useCallback(() => {
@@ -476,7 +525,9 @@ export default function HtmlViewerCanvas({
       return
     }
 
-    originalHtmlRef.current = doc.body.innerHTML
+    cleanupSnapshotRef.current?.()
+    const players = mountSnapshotActivities(doc)
+    setActivities(players)
     setIframeReady(true)
 
     // Inject pulse animation CSS — parent stylesheet doesn't apply inside the iframe document
@@ -497,17 +548,21 @@ export default function HtmlViewerCanvas({
 
     const handleMouseUp = () => handleMouseUpRef.current()
     doc.addEventListener('mouseup', handleMouseUp)
-    return () => doc.removeEventListener('mouseup', handleMouseUp)
+    cleanupSnapshotRef.current = () => doc.removeEventListener('mouseup', handleMouseUp)
   }, [activeSnapshotSrc])
 
   // ── handleGoToAnnotation ──────────────────────────────────────────────────
   function handleGoToAnnotation(annotationId: string) {
-    const iframeDoc = iframeRef.current?.contentDocument
-    if (iframeDoc) {
-      const mark = iframeDoc.querySelector(`[data-annotation-id="${annotationId}"]`)
-      if (mark) {
-        mark.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      }
+    const note = activityNotes.find(a => a.id === annotationId)
+    const activity = note && activities.find(item => item.key === note.anchor.activityKey)
+    if (activity) {
+      setActivityRowOpen(activity, true)
+      activity.placeholder.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    } else {
+      const doc = iframeRef.current?.contentDocument
+      const mark = doc && [...doc.querySelectorAll<HTMLElement>('[data-annotation-id]')]
+        .find(el => el.dataset.annotationId === annotationId)
+      mark?.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }
     onGoToAnnotation?.(annotationId)
   }
@@ -665,6 +720,17 @@ export default function HtmlViewerCanvas({
             title="OpenStax content"
             sandbox="allow-same-origin allow-popups"
             onLoad={handleIframeLoad}
+          />
+        )}
+
+        {activities.length > 0 && (
+          <SnapshotH5pPlayers
+            key={activeSnapshotSrc}
+            activities={activities}
+            annotations={activityNotes}
+            readOnly={disabled}
+            onAnnotate={annotateActivity}
+            onOpenAnnotation={openActivityAnnotation}
           />
         )}
 

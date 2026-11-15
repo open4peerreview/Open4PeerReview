@@ -262,6 +262,15 @@ function markRange(
   }
 }
 
+/** Remove old highlight wrappers while keeping live players and the document in place. */
+export function clearHighlights(doc: Document): void {
+  for (const mark of doc.querySelectorAll('mark.annotation-highlight[data-annotation-id]')) {
+    const parent = mark.parentNode
+    mark.replaceWith(...mark.childNodes)
+    parent?.normalize()
+  }
+}
+
 /**
  * Inject highlights for every annotation into the iframe document.
  * Accepts the full anchor object so `resolveAnchor` can use the

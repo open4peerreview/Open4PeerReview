@@ -8,10 +8,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The OER Certification Hub is a peer review platform for Open Educational Resources (OER), built in partnership with CMU's Open Learning Initiative (OLI) and Maricopa Community Colleges. It replaces a slow, email-based review process with an automated "Certification Hub" using standardized rubrics and digital stamps.
 
-**Repository:** github.com/allimaeeee/Open4PeerReview
+**Repository:** github.com/open4peerreview/Open4PeerReview
 **Production (Vercel):** https://annotation-platform-seven.vercel.app (the older `oerhub.vercel.app` URL is stale)
 **Status:** Active development. Core review workflows are built and functional — author/reviewer dashboards, the reviewer console, the review report (author feedback view), the OER submission flow, onboarding, and settings. Current focus: a new browser-extension-based review workflow for interactive OER (starting with OLI Torus) that can't be ingested and rendered directly into the platform, plus bringing that extension's visual design in line with the platform's design tokens.
-**Program:** METALS Capstone (7-month project, spring + summer 2026)
+**Program:** METALS Capstone (spring–fall 2026; handover in mid-December 2026)
 **Process:** Lean development with iterative Build–Measure–Learn cycles across multiple MVP releases (Discover → Ideate → Release → Rediscover)
 
 ### Hunt Statement
@@ -33,7 +33,14 @@ Package manager is npm. Node scripts live in `package.json`.
 - `npm run typecheck` runs next typegen && tsc --noEmit and also runs in CI. `tsconfig.json` excludes `extension/` (it has its own `extension/tsconfig.json`, checked by `npm run typecheck:ext` that runs in CI).
 
 ### Tests (Vitest)
-- `npm test` — runs `vitest run`. **Test scope is currently narrow:** `vitest.config.ts` only includes `features/ai-chat/__tests__/**/*.test.ts` (Node environment). There is no component/E2E test layer yet.
+- `npm test` — runs `vitest run` (Node environment). `vitest.config.ts` includes:
+  - `features/ai-chat/__tests__/**/*.test.ts`
+  - `lib/__tests__/**/*.test.ts`
+  - `app/api/snapshot/__tests__/**/*.test.ts`
+  - `app/api/documents/__tests__/**/*.test.ts`
+  - `components/**/__tests__/**/*.test.tsx`
+  - `tests/**/*.test.ts` — one folder per change, created by the `/feature` skill (`.claude/skills/feature/`); see `tests/README.md`.
+- A new test file outside these paths won't run until it's added to `include`. There is no E2E/browser test layer.
 - Run a single test file: `npx vitest run features/ai-chat/__tests__/promptBuilder.test.ts`
 - Watch a single test: `npx vitest features/ai-chat/__tests__/promptBuilder.test.ts`
 - The `@` import alias resolves to the repo root (aliased in both `tsconfig.json` and `vitest.config.ts`).
@@ -63,10 +70,11 @@ Path alias `@/*` → repo root. Beyond the product-surface breakdown above, here
 - **`app/`** — Next.js App Router. Route groups mirror the surfaces: `author/`, `reviewer/`, `coordinator/`, `review/` (reviewer console), `dashboard/`, `login/`, `onboard/`, plus `auth/callback/route.ts`. Page-specific components sit in a co-located `components/` subfolder per route.
 - **`app/api/`** — server routes:
   - `ai-chat/route.ts` — the AI assistant endpoint (Google Gemini via `@google/generative-ai`); auth-gated through Supabase.
-  - `snapshot/route.ts`, `snapshot/page/route.ts`, `snapshot/[fingerprint]/route.ts` — capture/serve screenshots of external OER URLs (OpenStax/Torus submissions that can't be rendered in-platform).
-- **`components/`** — shared UI split by altitude: `ui/` (primitives — Button, Card, Accordion, Chip, …), `patterns/` (compositions), `layout/`, `auth/`. Each file defines its own local `cx()` merge helper (not a shared import).
+  - `snapshot/route.ts`, `snapshot/page/route.ts`, `snapshot/[fingerprint]/route.ts` — capture/serve snapshots of submitted OER URLs (OpenStax, Pressbooks, other web pages) so they can be rendered and annotated in-platform.
+  - `documents/[documentId]/resource/route.ts` — opens a submission's original resource: returns the source URL, or a freshly signed storage URL for uploaded files (stored upload URLs expire). Uses the signed-in user's client, so RLS applies.
+- **`components/`** — shared UI split by altitude: `ui/` (primitives — Button, Card, Accordion, Chip, …), `patterns/` (compositions), `layout/`, `auth/`, plus `SaveStatusIndicator.tsx` at the root. Each file defines its own local `cx()` merge helper (not a shared import).
 - **`features/ai-chat/`** — a self-contained feature module for the in-app AI assistant: client widget/panel/orb (`AIChatWidget`, `AIChatPanel`, `AIOrbButton`, selection detection, context badges), `server/` prompt builders (`promptBuilder.ts`, `outputSpecs.ts`), and `rubric-data/` (the 6 rubrics as paired `.json`/`.md` plus lookup/standards helpers). This is the AI-assisted-moderation piece from the Hunt Statement and is **not** described elsewhere in this file — treat this module as the source of truth for AI behavior.
-- **`lib/`** — non-UI logic: `supabase/` (browser `client.ts`, `server.ts`, `queries.ts`, generated `types.ts`, `useUser.ts`), `anchoring/html.ts` (annotation anchoring), `design-system/token-values.ts` (the extension's flat token mirror — keep in sync with `globals.css`), `oer-platform.ts` (detect OpenStax/Torus URLs), `torus.ts`, `snapshot-utils.ts`, `pdf-coords.ts`, `review-save-context.tsx`.
+- **`lib/`** — non-UI logic: `supabase/` (browser `client.ts`, `server.ts`, `index.ts`, `queries.ts`, generated `types.ts`, `useUser.ts`, `authorFeedback.ts` — author-side writes on the feedback report: "addressed" / "will address later" flags and revision notes), `anchoring/html.ts` (annotation anchoring), `design-system/token-values.ts` (the extension's flat token mirror — keep in sync with `globals.css`), `oer-platform.ts` (detect OpenStax/Pressbooks/Torus URLs, incl. Pressbooks on custom domains), `url-safety.ts` (server-only SSRF guard for fetching user-submitted OER URLs), `torus.ts`, `snapshot-utils.ts`, `pdf-coords.ts`, `review-save-context.tsx`.
 - **`hooks/`** — `useReviewAutoSave.ts`, `useReviewTracking.ts`.
 - **`types/`** — `database.types.ts` (Supabase schema types), `index.ts`.
 - **`extension/`** — vanilla-TS Chrome MV3 extension (`src/background.ts`, `content.ts`, `popup.ts`, `dashboard.ts`, `types.ts`, bundled fonts); `manifest.json`; esbuild via `build.mjs`. Separate from the Next.js build — see Commands.
@@ -82,7 +90,7 @@ A single person may hold multiple roles simultaneously (e.g., an author for thei
 
 - **Author (Sarah):** Submits OER, tracks review progress, receives structured feedback, performs revisions. *Built.*
 - **Reviewer (James):** Evaluates OER using a side-by-side workspace with rubric-based annotation tools. *Built* — including a separate browser-extension path for OER that can't be rendered inside the platform (see below).
-- **Coordinator (Mark):** Manages the review pipeline, assigns reviewers, mediates feedback quality. *Not yet built* — waiting on a dedicated design/discovery pass.
+- **Coordinator (Mark):** Manages the review pipeline, assigns reviewers, mediates feedback quality. *First version built* (see Platform Structure); being redesigned for Release 1 — see the team's Coordinator Dashboard plan.
 - **Adopter (Educator):** Discovers certified/peer-reviewed OER through some public-facing surface — exact form isn't finalized yet (could be a public listing/landing page of certified resources, or similar). *Not yet built.* The underlying digital-stamp/certification concept is in the PRD; a separate, lower-priority read-only browser extension for surfacing certification info on external OER sites (OpenStax, Pressbooks) is also scoped but backlogged.
 
 ---
@@ -97,7 +105,7 @@ Rather than a fixed set of lettered "blocks," here's what actually exists today,
 - **Review Report** — read-only split-screen feedback view for authors, reusing the same OER-panel component from the Reviewer Console in a disabled/read-only mode.
 - **OER Submission flow** — icon radio cards for format/scope selection, multi-page upload support.
 - **Onboarding, navbar, settings modal** — built. Note: this is a simpler flow than the more elaborate multi-role/multi-stage onboarding described in the current PRD — that fuller version has not been implemented yet.
-- **Coordinator Dashboard** — not yet built.
+- **Coordinator Dashboard** (`app/coordinator/`) — first version built: submissions grouped into Need Assignment / Under Review / Need Approval buckets plus drafts; upload and submit OER on an author's behalf (save as draft, edit, submit); accept or decline submitted OER; assign reviewers and release a document to them; approve a submitted review or return it to the reviewer with a note. Server actions live in `app/coordinator/actions.ts`; the review-approval page is `app/coordinator/review/[documentId]`. Release 1 will substantially change this surface — check the current plan before large changes.
 - **Browser extension (`extension/` folder)** — a write-capable extension purpose-built for reviewing OLI Torus content. Injects a floating Shadow-DOM panel into the live Torus page, mirroring the platform's rubric interface; supports text highlights and hotspot annotations (for non-text elements); captures a screenshot on every annotation. Currently built in vanilla TypeScript with esbuild — it does not share components, build pipeline, or CSS with the Next.js app. Bringing it into visual alignment with the platform is in progress (see Design System below).
 - **Read-only discovery extension** (separate from the above) — scoped in the PRD for surfacing certification badges on external OER sites, for the Adopter role. Backlogged, not started.
 
@@ -216,6 +224,14 @@ The browser extension (`extension/`) is a separate codebase: vanilla TypeScript 
 
 The team moved to a PR-based workflow in October 2026. The full guide, with commands and screenshots, is the team's "Dev Workflow + Git Hygiene" Google Doc. This section is the short version. If the two disagree, the Google Doc wins; update this section to match.
 
+### Issues
+- Every piece of work (bug, feature, design/copy change, chore, discovery) starts as a GitHub issue. Search open and closed issues first; if it exists, comment there instead.
+- Use one of the three forms in `.github/ISSUE_TEMPLATE/` (Bug report / Feature request / Design, chore or discovery task); blank issues are disabled. The forms add `status/needs-triage`.
+- Labels: exactly one `type/` (bug, feature, design, chore, discovery), one `priority/` (P0 breaks the core journey or blocks client testing; P1 needed soon, workaround exists; P2 polish), and at least one `area/` (ingestion, extension, review-console, report-revision, dashboards, coordinator, infra, database). Add `status/` (needs-decision, blocked, cannot-reproduce, known-limitation) and `source/` (client, internal-qa, user-testing) when they apply.
+- "Done when" in the issue is the checklist the PR reviewer tests against — each item should be something you can see or click.
+- Put the issue number in the branch name (`fix/42-login-bug`) and `Closes #42` in the PR description, so the issue closes when the PR is squash-merged. Bugs use `fix/`; everything else uses `feature/`.
+- Triage happens at the weekly team meeting. Decisions and progress notes go in issue comments.
+
 ### Branches
 - `main` is the only permanent branch. Nobody commits to it directly: every change goes through a pull request.
 - Each change gets a short-lived branch cut from the latest `main`, and the branch is deleted after it merges.
@@ -254,7 +270,8 @@ The team moved to a PR-based workflow in October 2026. The full guide, with comm
 - Never commit or push to `main`, force-push, or delete remote branches. Branch protection on `main` is meant to block these too.
 - Don't merge PRs. A human merges after review.
 - Never commit `.env*` files, keys, or tokens. The anon key is the only Supabase key that may appear in client or extension code.
-- Keep each PR to the one purpose of its branch. Note out-of-scope problems in the PR description instead of fixing them there.
+- Keep each PR to the one purpose of its branch. Note out-of-scope problems in the PR description instead of fixing them there, and open a separate issue for them.
+- When opening issues or PRs, use the templates and label scheme above.
 
 ---
 
@@ -268,8 +285,15 @@ The team moved to a PR-based workflow in October 2026. The full guide, with comm
 - **Validation:** full rubric completion is required before submission; ratings outside "Exemplifies" require at least one linked annotation or note as evidence.
 
 ### Content Rendering
-- Format-specific rendering per file type is the intended architecture (PDF via PDF.js, HTML via a sanitized iframe/shadow DOM). Audio and image annotation support (waveform-based and canvas-overlay, respectively, per the original tech spec) — verify current implementation status before relying on it, as this hasn't come up in recent build work.
-- For OLI Torus (interactive, non-ingestable OER), there's no live in-platform rendering at all — the reviewer console instead displays a stack of screenshots captured via the browser extension.
+OER enters the platform three ways (the submission form's source tabs: PDF / URL / Torus). Each has its own viewer and interaction elements:
+
+- **PDF upload** — rendered with PDF.js (`PDFViewer` / `PDFViewerCanvas`). Reviewers select text to create a highlight.
+- **URL submission** — `/api/snapshot` fetches and stores a snapshot of each page (one primary URL plus optional additional pages), with `lib/url-safety.ts` guarding the fetch. Platform is detected from the hostname (OpenStax, Pressbooks), or from the page HTML for Pressbooks on a custom domain such as `open.maricopa.edu`; anything else is "Other". Rendered in `HtmlViewerCanvas`, with a page selector / prev–next for multi-page submissions. Reviewers select text to create a highlight (anchored via `lib/anchoring/html.ts`).
+- **OLI Torus** (interactive, can't be ingested) — no in-platform rendering. Reviewers annotate the live Torus page through the browser extension: text highlights, plus a hotspot mode for non-text elements (bounding-box anchor); a screenshot is captured with every annotation. Back in the reviewer console, `TorusAnnotationViewer` shows those screenshots (prev/next) with the annotated region marked.
+
+In every viewer, creating an annotation opens the annotation popup: a comment ("Describe what this evidence shows…"), an optional tag (Action Item / Quick Fix), and links to rubric criteria. Annotations not yet linked to a criterion appear under Unlinked Highlights.
+
+Audio and image annotation (waveform / canvas overlay, per the original tech spec) — verify current implementation status before relying on it; it hasn't come up in recent build work.
 
 ### Data Integrity
 - Annotations are stored with a JSONB anchor (shape varies by format, tagged with an `anchor_type` discriminator) plus a `criterion_ids[]` array supporting 0, 1, or multiple links.
@@ -297,6 +321,9 @@ Partners: CMU Open Learning Initiative (OLI), Maricopa Community Colleges
 
 Core review workflows are built and functional: author and reviewer dashboards, the reviewer console (annotation + rubric scoring), the review report (author-facing feedback view), the OER submission flow, and a simple onboarding/settings/navbar layer.
 
-Active focus: the interactive-OER (OLI Torus) review workflow, spanning three pieces — the reviewer dashboard's Begin/Continue Review entry point, the write-capable browser extension for annotating live Torus pages, and a screenshot-based left panel in the review console for reviewing those annotations back in the platform. Alongside this, the extension is being brought into visual alignment with the platform's actual design tokens (colors, typography), since it was originally built with its own independent, hardcoded styling.
+Active focus (fall 2026):
+- **Coordinator Dashboard, Release 1** — redesign of the first-version coordinator surface (see the team's Coordinator Dashboard plan).
+- **Browser extension** — the write-capable extension for annotating live OLI Torus pages (text highlights, hotspots, per-annotation screenshots), the reviewer dashboard's Begin/Continue Review entry point, and the screenshot-based panel in the review console. The extension is also being brought into visual alignment with the platform's design tokens, since it was originally built with its own hardcoded styling.
+- **Ingestion** — PDF upload, URL submission (OpenStax, Pressbooks including custom domains such as `open.maricopa.edu`, detected from the page HTML), and OLI Torus, each with its own viewer and interaction elements (see Content Rendering).
 
-Not yet started: the Coordinator dashboard/role, the Adopter-facing certification surface, and the read-only OER-discovery browser extension (a separate, lower-priority extension from the one described above).
+Not yet started: the Adopter-facing certification surface, and the read-only OER-discovery browser extension (a separate, lower-priority extension from the one described above).

@@ -61,12 +61,13 @@ export async function POST(req: NextRequest) {
   const { data: submitter } = await supabase.from('users').select('institution').eq('id', user.id).single()
   const platform = platformLabel(basePlat, submitter?.institution)
 
-  // Snapshot each additional page URL
+  // Snapshot additional pages in parallel: whole-chapter submissions can have 10–30 pages, and
+  // doing them one by one (fetch + storage upload) took ~0.7s per page.
+  const results = await Promise.all(validAdditionalUrls.map(pageUrl => fetchAndSnapshot(supabase, pageUrl)))
   const additionalPages: Array<{ url: string; fingerprint: string; storagePath: string }> = []
-  for (const pageUrl of validAdditionalUrls) {
-    const result = await fetchAndSnapshot(supabase, pageUrl)
+  for (const [i, result] of results.entries()) {
     if ('error' in result) return NextResponse.json({ error: result.error }, { status: result.status })
-    additionalPages.push({ url: pageUrl, fingerprint: result.fingerprint, storagePath: result.storagePath })
+    additionalPages.push({ url: validAdditionalUrls[i], fingerprint: result.fingerprint, storagePath: result.storagePath })
   }
 
   try {

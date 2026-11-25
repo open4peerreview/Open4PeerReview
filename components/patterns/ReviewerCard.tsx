@@ -1,5 +1,6 @@
 'use client'
 
+import { ResourceLink } from '@/components/ui/ResourceLink'
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -133,12 +134,7 @@ export function ReviewerCard({
           </svg>
           {authorName}
         </span>
-        <span className="flex items-center gap-1">
-          <svg viewBox="0 0 16 16" fill="none" className="w-3.5 h-3.5 shrink-0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M6 3H3a1 1 0 00-1 1v9a1 1 0 001 1h9a1 1 0 001-1v-3M9 2h5v5M14 2L7 9" />
-          </svg>
-          {platform}
-        </span>
+        <ResourceLink documentId={id} label={platform} />
         <span className="flex items-center gap-1">
           <svg viewBox="0 0 16 16" fill="none" className="w-3.5 h-3.5 shrink-0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <rect x="2" y="4" width="12" height="10" rx="1" />

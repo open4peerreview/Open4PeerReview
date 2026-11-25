@@ -1,5 +1,6 @@
 'use client'
 
+import { ResourceLink } from '@/components/ui/ResourceLink'
 import { useState } from 'react'
 import { Accordion } from '@/components/ui/Accordion'
 import { Select } from '@/components/ui/Select'
@@ -11,7 +12,6 @@ export interface TaskPoolCardProps {
   id: string
   title: string
   platform: string
-  resourceUrl: string
   authorName: string
   discipline: string
   ccLicense: string
@@ -37,7 +37,6 @@ export function TaskPoolCard({
   id,
   title,
   platform,
-  resourceUrl,
   authorName,
   discipline,
   ccLicense,
@@ -99,12 +98,7 @@ export function TaskPoolCard({
             </svg>
             {authorName}
           </span>
-          <span className="flex items-center gap-1">
-            <svg viewBox="0 0 16 16" fill="none" className="w-3.5 h-3.5 shrink-0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M6 3H3a1 1 0 00-1 1v9a1 1 0 001 1h9a1 1 0 001-1v-3M9 2h5v5M14 2L7 9" />
-            </svg>
-            {platform}
-          </span>
+          <ResourceLink documentId={id} label={platform} />
           <span className="flex items-center gap-1">
             <svg viewBox="0 0 16 16" fill="none" className="w-3.5 h-3.5 shrink-0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <rect x="2" y="4" width="12" height="10" rx="1" />
@@ -145,17 +139,7 @@ export function TaskPoolCard({
             {ccLicense}
           </span>
 
-          <a
-            href={resourceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 text-[var(--color-primary)] hover:underline"
-          >
-            <svg viewBox="0 0 16 16" fill="none" className="w-3.5 h-3.5 shrink-0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M6 3H3a1 1 0 00-1 1v9a1 1 0 001 1h9a1 1 0 001-1v-3M9 2h5v5M14 2L7 9" />
-            </svg>
-            View Resource
-          </a>
+          <ResourceLink documentId={id} label="View Resource" className="text-primary" />
 
         </div>
 

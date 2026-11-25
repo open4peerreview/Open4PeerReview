@@ -278,48 +278,56 @@ export function CriterionCard({
           </div>
 
           <div className={`flex gap-3 min-w-0 ${isNarrow ? 'flex-col' : ''}`}>
-            <RatingBox
-              variant="exceeds"
-              style={isNarrow ? { flex: 'none', width: '100%' } : getColumnStyle('exceeds')}
-              isActive={score.scores.includes('exceeds')}
-              comments={score.exceedsComments}
-              onAddComment={(body) => onAddComment(rubricItem.id, 'exceeds', body)}
-              onEditComment={(id, body) => onEditComment(rubricItem.id, id, 'exceeds', body)}
-              onDeleteComment={(id) => onDeleteComment(rubricItem.id, id, 'exceeds')}
-              onActivate={() => { if (!score.scores.includes('exceeds')) onScoreToggle(rubricItem.id, 'exceeds') }}
-              onDeactivate={() => { if (score.scores.includes('exceeds')) onScoreToggle(rubricItem.id, 'exceeds') }}
-              onTextareaFocus={isNarrow ? undefined : () => setFocusedBox('exceeds')}
-              onTextareaBlur={isNarrow ? undefined : () => setFocusedBox(null)}
-              isReadOnly={isReadOnly}
-            />
-            <RatingBox
-              variant="exemplifies"
-              style={isNarrow ? { flex: 'none', width: '100%' } : getColumnStyle('exemplifies')}
-              isActive={score.scores.includes('exemplifies')}
-              comments={score.exemplifiesComments}
-              onAddComment={(body) => onAddComment(rubricItem.id, 'exemplifies', body)}
-              onEditComment={(id, body) => onEditComment(rubricItem.id, id, 'exemplifies', body)}
-              onDeleteComment={(id) => onDeleteComment(rubricItem.id, id, 'exemplifies')}
-              onActivate={() => { if (!score.scores.includes('exemplifies')) onScoreToggle(rubricItem.id, 'exemplifies') }}
-              onDeactivate={() => { if (score.scores.includes('exemplifies')) onScoreToggle(rubricItem.id, 'exemplifies') }}
-              onTextareaFocus={isNarrow ? undefined : () => setFocusedBox('exemplifies')}
-              onTextareaBlur={isNarrow ? undefined : () => setFocusedBox(null)}
-              isReadOnly={isReadOnly}
-            />
-            <RatingBox
-              variant="does_not_meet"
-              style={isNarrow ? { flex: 'none', width: '100%' } : getColumnStyle('does_not_meet')}
-              isActive={score.scores.includes('does_not_meet')}
-              comments={score.niComments}
-              onAddComment={(body) => onAddComment(rubricItem.id, 'does_not_meet', body)}
-              onEditComment={(id, body) => onEditComment(rubricItem.id, id, 'does_not_meet', body)}
-              onDeleteComment={(id) => onDeleteComment(rubricItem.id, id, 'does_not_meet')}
-              onActivate={() => { if (!score.scores.includes('does_not_meet')) onScoreToggle(rubricItem.id, 'does_not_meet') }}
-              onDeactivate={() => { if (score.scores.includes('does_not_meet')) onScoreToggle(rubricItem.id, 'does_not_meet') }}
-              onTextareaFocus={isNarrow ? undefined : () => setFocusedBox('does_not_meet')}
-              onTextareaBlur={isNarrow ? undefined : () => setFocusedBox(null)}
-              isReadOnly={isReadOnly}
-            />
+            {/* display:contents keeps the box mounted (preserving pending timers) while
+                display:none hides it; never unmount in read-only so in-flight saves aren't killed */}
+            <div style={isReadOnly && !score.scores.includes('exceeds') ? { display: 'none' } : { display: 'contents' }}>
+              <RatingBox
+                variant="exceeds"
+                style={isNarrow ? { flex: 'none', width: '100%' } : getColumnStyle('exceeds')}
+                isActive={score.scores.includes('exceeds')}
+                comments={score.exceedsComments}
+                onAddComment={(body) => onAddComment(rubricItem.id, 'exceeds', body)}
+                onEditComment={(id, body) => onEditComment(rubricItem.id, id, 'exceeds', body)}
+                onDeleteComment={(id) => onDeleteComment(rubricItem.id, id, 'exceeds')}
+                onActivate={() => { if (!score.scores.includes('exceeds')) onScoreToggle(rubricItem.id, 'exceeds') }}
+                onDeactivate={() => { if (score.scores.includes('exceeds')) onScoreToggle(rubricItem.id, 'exceeds') }}
+                onTextareaFocus={isNarrow || isReadOnly ? undefined : () => setFocusedBox('exceeds')}
+                onTextareaBlur={isNarrow || isReadOnly ? undefined : () => setFocusedBox(null)}
+                isReadOnly={isReadOnly}
+              />
+            </div>
+            <div style={isReadOnly && !score.scores.includes('exemplifies') ? { display: 'none' } : { display: 'contents' }}>
+              <RatingBox
+                variant="exemplifies"
+                style={isNarrow ? { flex: 'none', width: '100%' } : getColumnStyle('exemplifies')}
+                isActive={score.scores.includes('exemplifies')}
+                comments={score.exemplifiesComments}
+                onAddComment={(body) => onAddComment(rubricItem.id, 'exemplifies', body)}
+                onEditComment={(id, body) => onEditComment(rubricItem.id, id, 'exemplifies', body)}
+                onDeleteComment={(id) => onDeleteComment(rubricItem.id, id, 'exemplifies')}
+                onActivate={() => { if (!score.scores.includes('exemplifies')) onScoreToggle(rubricItem.id, 'exemplifies') }}
+                onDeactivate={() => { if (score.scores.includes('exemplifies')) onScoreToggle(rubricItem.id, 'exemplifies') }}
+                onTextareaFocus={isNarrow || isReadOnly ? undefined : () => setFocusedBox('exemplifies')}
+                onTextareaBlur={isNarrow || isReadOnly ? undefined : () => setFocusedBox(null)}
+                isReadOnly={isReadOnly}
+              />
+            </div>
+            <div style={isReadOnly && !score.scores.includes('does_not_meet') ? { display: 'none' } : { display: 'contents' }}>
+              <RatingBox
+                variant="does_not_meet"
+                style={isNarrow ? { flex: 'none', width: '100%' } : getColumnStyle('does_not_meet')}
+                isActive={score.scores.includes('does_not_meet')}
+                comments={score.niComments}
+                onAddComment={(body) => onAddComment(rubricItem.id, 'does_not_meet', body)}
+                onEditComment={(id, body) => onEditComment(rubricItem.id, id, 'does_not_meet', body)}
+                onDeleteComment={(id) => onDeleteComment(rubricItem.id, id, 'does_not_meet')}
+                onActivate={() => { if (!score.scores.includes('does_not_meet')) onScoreToggle(rubricItem.id, 'does_not_meet') }}
+                onDeactivate={() => { if (score.scores.includes('does_not_meet')) onScoreToggle(rubricItem.id, 'does_not_meet') }}
+                onTextareaFocus={isNarrow || isReadOnly ? undefined : () => setFocusedBox('does_not_meet')}
+                onTextareaBlur={isNarrow || isReadOnly ? undefined : () => setFocusedBox(null)}
+                isReadOnly={isReadOnly}
+              />
+            </div>
           </div>
 
           {score.annotations.length > 0 && (

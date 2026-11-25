@@ -144,7 +144,6 @@ export async function ReviewerDashboard({ userId, displayName }: Props) {
       id: doc.id,
       title: doc.title,
       platform: getFileLabel(doc.file_type),
-      resourceUrl: '', // stub — source_url not in schema yet
       authorName: author?.display_name ?? author?.email ?? 'Unknown',
       discipline: EXPERT_DOMAIN_LABELS[doc.subject_matter as ExpertDomain] ?? doc.subject_matter ?? '',
       ccLicense: CC_LICENSE_LABELS[doc.creative_commons_license as CreativeCommonsLicense] ?? doc.creative_commons_license ?? '',

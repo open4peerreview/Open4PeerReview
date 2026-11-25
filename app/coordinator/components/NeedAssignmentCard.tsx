@@ -1,5 +1,6 @@
 'use client'
 
+import { ResourceLink } from '@/components/ui/ResourceLink'
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { RubricTag } from '@/components/ui/RubricTag'
@@ -90,9 +91,11 @@ export function NeedAssignmentCard({ doc, orgReviewers, preAssigned = [] }: Need
           {/* Row 1: format badge + public pill + author + date */}
           <div className="flex items-center gap-3 flex-wrap text-body-sm text-text-secondary">
             {fileTypeLabel && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-sm bg-[var(--color-surface-container-high)] text-label-sm font-label font-semibold uppercase tracking-widest text-text-secondary">
-                {fileTypeLabel}
-              </span>
+              <ResourceLink
+                documentId={doc.id}
+                label={fileTypeLabel}
+                className="px-2 py-0.5 bg-[var(--color-surface-container-high)] text-label-sm font-label font-semibold uppercase tracking-widest text-text-secondary"
+              />
             )}
             {scope.includes('public') && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm border border-[var(--color-border)] text-label-sm font-label font-semibold uppercase tracking-widest text-text-secondary">

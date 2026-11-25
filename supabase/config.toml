@@ -119,12 +119,18 @@ enabled = true
 # The maximum file size allowed (e.g. "5MB", "500KB").
 file_size_limit = "50MiB"
 
-# Uncomment to configure local storage buckets
-# [storage.buckets.images]
-# public = false
-# file_size_limit = "50MiB"
-# allowed_mime_types = ["image/png", "image/jpeg"]
-# objects_path = "./images"
+# Local storage buckets, matching the hosted project (see storage.buckets in the
+# production dump — public flag, file_size_limit, allowed_mime_types).
+[storage.buckets.documents]
+public = true
+
+[storage.buckets.screenshots]
+public = true
+
+[storage.buckets.openstax-snapshots]
+public = false
+file_size_limit = "10MiB"
+allowed_mime_types = ["text/html"]
 
 # Allow connections via S3 compatible clients
 [storage.s3_protocol]
